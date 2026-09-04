@@ -463,5 +463,140 @@ def analyze():
     if os.path.exists(cache_file):
         with open(cache_file, 'r') as f:
             cache = json.load(f)
-    
     videos = list_drive_files(DRIVE_FOLDER_ID)
+    to_analyze = []
+    
+    for v in videos:
+        if v['name'].endswith(tuple(VIDEO_EXTENSIONS)):
+            if mode == 'new' and v['id'] in cache:
+                continue
+            to_analyze.append(v)
+    
+    if not to_analyze:
+        return jsonify({'message': 'No videos to analyze', 'count': 0})
+    
+    def background_analyze():
+        for video in to_analyze:
+            try:
+                local_path = os.path.join(WORK_FOLDER, video['name'])
+                download_from_drive(video['id'], local_path)
+                
+                duration = get_video_duration(local_path)
+                frames = extract_keyframes(local_path, num_frames=10)
+                
+                vision_desc = analyze_frames_vision(frames, video['name']) if frames else ""
+                
+                audio_path = extract_audio(local_path)
+                audio_desc = ""
+                
+                if audio_path:
+                    audio_desc = transcribe_audio(audio_path)
+                    try:
+                        os.remove(audio_path)
+                    except:
+                        pass
+                
+                final_desc = combine_analysis(vision_desc, audio_desc, video['name'])
+                
+                cache[video['id']] = {
+                    'filename': video['name'],
+                    'duration': duration,
+                    'description': final_desc,
+                    'analyzed_at': datetime.now().isoformat()
+                }
+                
+                try:
+                    os.remove(local_path)
+                except:
+                    pass
+            except Exception as e:
+                print(f"Error analyzing {video['name']}: {e}")
+        
+        with open(cache_file, 'w') as f:
+            json.dump(cache, f, indent=2)
+    
+    thread = threading.Thread(target=background_analyze)
+    thread.start()
+    
+    return jsonify({'message': 'Analysis started', 'count': len(to_analyze)})
+
+@app.route('/api/search', methods=['POST'])
+def search():
+    data = request.get_json()
+    query = data.get('query', '')
+    
+    if not query:
+        return jsonify({'error': 'No query'}), 400
+    
+    cache_file = os.path.join(WORK_FOLDER, 'video_cache.json')
+    if not os.path.exists(cache_file):
+        return jsonify({'videos': []})
+    
+    with open(cache_file, 'r') as f:
+        cache = json.load(f)
+    
+    videos = []
+    for file_id, data in cache.items():
+        videos.append({
+            'filename': data['filename'],
+            'duration': data['duration'],
+            'description': data['description'],
+            'file_id': file_id
+        })
+    
+    matched = semantic_search_videos(query, videos)
+    return jsonify({'videos': matched, 'count': len(matched)})
+
+@app.route('/api/generate', methods=['POST'])
+def generate():
+    data = request.get_json()
+    video_file_ids = data.get('video_file_ids', [])
+    output_name = data.get('output_name', 'output.mp4')
+    
+    if not video_file_ids or not drive_service:
+        return jsonify({'error': 'No videos or Drive not connected'}), 400
+    
+    def background_generate():
+        video_paths = []
+        
+        try:
+            for file_id in video_file_ids:
+                cache_file = os.path.join(WORK_FOLDER, 'video_cache.json')
+                with open(cache_file, 'r') as f:
+                    cache = json.load(f)
+                
+                filename = cache[file_id]['filename']
+                local_path = os.path.join(WORK_FOLDER, filename)
+                
+                download_from_drive(file_id, local_path)
+                video_paths.append(local_path)
+            
+            output_path = os.path.join(WORK_FOLDER, output_name)
+            success = stitch_videos(video_paths, output_path)
+            
+            if success:
+                output_folder_id = data.get('output_folder_id', DRIVE_FOLDER_ID)
+                upload_to_drive(output_path, output_folder_id)
+            
+            for path in video_paths:
+                try:
+                    os.remove(path)
+                except:
+                    pass
+        except Exception as e:
+            print(f"Generation error: {e}")
+    
+    thread = threading.Thread(target=background_generate)
+    thread.start()
+    
+    return jsonify({'message': 'Video generation started', 'output': output_name})
+
+@app.route('/api/status')
+def status():
+    connected = drive_service is not None and DRIVE_FOLDER_ID != ''
+    return jsonify({'drive_connected': connected, 'api_key_set': bool(os.getenv('ANTHROPIC_API_KEY')), 'status': 'ready'})
+
+if __name__ == '__main__':
+    if DRIVE_AVAILABLE:
+        init_google_drive()
+    app.run(host='0.0.0.0', port=5000, debug=False)
