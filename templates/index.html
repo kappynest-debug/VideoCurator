@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Curator - Create Custom Workouts</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Video Curator</h1>
+            <p>Create custom workout videos from your fitness content library</p>
+        </header>
+
+        <main>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="upload">📹 Upload & Analyze</button>
+                <button class="tab-btn" data-tab="search">🔍 Search & Create</button>
+                <button class="tab-btn" data-tab="outputs">📥 My Videos</button>
+            </div>
+
+            <section id="upload" class="tab-content active">
+                <h2>Step 1: Upload Your Fitness Videos</h2>
+                
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📹</div>
+                    <h3>Drag & Drop Videos Here</h3>
+                    <p>or</p>
+                    <label for="fileInput" class="upload-btn">Choose Files</label>
+                    <input type="file" id="fileInput" multiple accept=".mp4,.mov,.avi,.mkv,.webm,.flv,.wmv" style="display:none;">
+                    <p class="upload-note">Supported: MP4, MOV, AVI, MKV, WEBM, FLV, WMV</p>
+                </div>
+
+                <div id="uploadProgress" class="progress-container" style="display:none;">
+                    <div class="progress-item">
+                        <span id="uploadFileName"></span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="uploadProgressBar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 style="margin-top: 40px;">Step 2: Analyze Videos</h2>
+                <p>The AI will watch your videos and understand what workout they are.</p>
+
+                <div class="video-list">
+                    <div class="list-header">
+                        <span>Your Videos (<span id="videoCount">0</span>)</span>
+                        <span id="analyzeStatus" class="status">Waiting for videos...</span>
+                    </div>
+                    <div id="videosList" class="videos">
+                        <p class="empty">No videos uploaded yet</p>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="analyzeAllBtn" class="btn btn-primary">Analyze All Videos</button>
+                    <button id="analyzeNewBtn" class="btn btn-secondary">Analyze New Videos Only</button>
+                </div>
+
+                <div id="analyzeProgress" class="progress-container" style="display:none;">
+                    <h3>Analysis in Progress...</h3>
+                    <div class="progress-item">
+                        <span id="analyzeFileName">Processing...</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill animate"></div>
+                        </div>
+                    </div>
+                    <p id="analyzeNote">This takes 2-3 minutes per video. Be patient!</p>
+                </div>
+            </section>
+
+            <section id="search" class="tab-content">
+                <h2>Search Your Videos</h2>
+                <p>Describe the workout you want, and the AI will find matching videos.</p>
+
+                <div class="search-box">
+                    <input type="text" id="queryInput" placeholder="e.g., '20 minute cardio for beginners'" class="search-input">
+                    <button id="searchBtn" class="btn btn-primary">Search Videos</button>
+                </div>
+
+                <div id="searchResults" class="search-results" style="display:none;">
+                    <h3>Found <span id="matchCount">0</span> Videos</h3>
+                    <div id="resultsList" class="results-list"></div>
+
+                    <div class="generate-section">
+                        <h3>Generate Your Video</h3>
+                        <div class="form-group">
+                            <label>Output Filename:</label>
+                            <input type="text" id="outputName" value="my_workout.mp4" class="form-input">
+                        </div>
+                        <button id="generateBtn" class="btn btn-success">Generate Video</button>
+                    </div>
+                </div>
+
+                <div id="generateProgress" class="progress-container" style="display:none;">
+                    <h3>Generating Your Video...</h3>
+                    <div class="progress-item">
+                        <span>Stitching clips together</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill animate"></div>
+                        </div>
+                    </div>
+                    <p>This usually takes 30 seconds to 2 minutes</p>
+                </div>
+
+                <div id="generateSuccess" class="success-message" style="display:none;">
+                    <h3>✅ Video Generated!</h3>
+                    <p id="generateMessage"></p>
+                    <button class="btn btn-primary" onclick="document.querySelector('[data-tab=outputs]').click()">
+                        View My Videos
+                    </button>
+                </div>
+            </section>
+
+            <section id="outputs" class="tab-content">
+                <h2>Your Generated Videos</h2>
+
+                <div id="outputsList" class="outputs-list">
+                    <p class="empty">No videos generated yet</p>
+                </div>
+
+                <div id="noOutputs" style="display:none;">
+                    <p class="note">
+                        Videos you create will appear here.
+                        <br><br>
+                        👉 Go to "Search & Create" tab to make your first video!
+                    </p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Video Curator - Powered by Claude AI</p>
+            <p>Upload videos → AI analyzes them → Search by workout type → Get custom video</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
